@@ -198,12 +198,12 @@ class RateLimiter {
    */
   public async checkApiCredentialsRateLimit(
     credentials: ApiCredentials,
-    operation: "authorize" | "token" | "userinfo" | "general" = "general",
+    operation: "authorize" | "token" | "userinfo" | "generate" | "general" = "general",
   ): Promise<RateLimitResult> {
     const config = this.getConfigForCredentials(credentials);
-    const identifier = `${credentials.clientId}:${operation}`;
+    const key = `api:${credentials.id}:${operation}`;
 
-    return this.checkRateLimit(identifier, config);
+    return this.checkRateLimit(key, config);
   }
 
   /**
@@ -212,7 +212,7 @@ class RateLimiter {
   public async recordApiRequest(
     credentials: ApiCredentials,
     success: boolean = true,
-    operation: "authorize" | "token" | "userinfo" | "general" = "general",
+    operation: "authorize" | "token" | "userinfo" | "generate" | "general" = "general",
   ): Promise<void> {
     const config = this.getConfigForCredentials(credentials);
     const identifier = `${credentials.clientId}:${operation}`;

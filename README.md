@@ -74,7 +74,7 @@ A comprehensive OAuth 2.0 authentication system built with Next.js, Firebase, an
 ### Backend
 - **Runtime**: Next.js API Routes
 - **Database**: Firebase Firestore
-- **Authentication**: Firebase Admin SDK
+- **Authentication**: The core OAuth flow (`/api/oauth/*`) uses server-side logic for security, while all other Firebase interactions (like credential management) are handled by the client-side SDK.
 - **Session Storage**: Encrypted cookies
 - **Rate Limiting**: Rate-limiter-flexible
 
@@ -194,6 +194,151 @@ A comprehensive OAuth 2.0 authentication system built with Next.js, Firebase, an
    - Monitor API usage
    - Check success rates
 
+## 🔧 OAuth REST API Reference
+
+This section provides a complete guide for developers integrating with the Glasstudio OAuth 2.0 API.
+
+### 1. Creating an OAuth Application
+
+Before you can use the API, you must create an OAuth application in the developer dashboard.
+
+1.  Navigate to your **Dashboard**.
+2.  Click on **"Create New Credentials"**.
+3.  Fill in the required details for your application, such as the application name and redirect URIs.
+4.  Once created, you will be provided with a **Client ID** and a **Client Secret**.
+    **Important:** The Client Secret is shown only once. Store it securely.
+
+### 2. The Authorization Flow (Authorization Code Grant)
+
+This is the standard flow for web applications to obtain an access token on behalf of a user.
+
+**Step A: Redirect the User to the Authorization URL**
+
+Your application should redirect the user to the following endpoint with the specified parameters:
+
+`GET /api/oauth/authorize`
+
+**Query Parameters:**
+
+| Parameter       | Required | Description                                                                                             |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `response_type` | Yes      | Must be `code`.                                                                                         |
+| `client_id`     | Yes      | Your application's Client ID.                                                                           |
+| `redirect_uri`  | Yes      | The URL to redirect the user back to after authorization. Must be one of the registered redirect URIs.    |
+| `scope`         | Yes      | A space-separated list of scopes you are requesting (e.g., `profile email`).                            |
+| `state`         | No       | An opaque value used to maintain state between the request and callback. Recommended for security.      |
+
+**Step B: User Authorizes & Receives Code**
+
+If the user approves, they will be redirected back to your `redirect_uri` with an authorization `code`.
+
+### 3. Exchanging the Code for an Access Token
+
+`POST /api/oauth/token`
+
+Use this endpoint to exchange the authorization code for an access token and a refresh token.
+
+**Request Body:**
+
+```json
+{
+  "grant_type": "authorization_code",
+  "code": "THE_CODE_FROM_STEP_2",
+  "redirect_uri": "YOUR_REGISTERED_REDIRECT_URI",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET"
+}
+```
+
+**Success Response (200 OK):**
+
+```json
+{
+  "access_token": "...",
+  "refresh_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "profile email"
+}
+```
+
+### 4. Refreshing an Access Token
+
+`POST /api/oauth/token`
+
+When an access token expires, use the refresh token to get a new one without user interaction.
+
+**Request Body:**
+
+```json
+{
+  "grant_type": "refresh_token",
+  "refresh_token": "THE_REFRESH_TOKEN",
+  "client_id": "YOUR_CLIENT_ID",
+  "client_secret": "YOUR_CLIENT_SECRET"
+}
+```
+
+**Success Response (200 OK):**
+
+```json
+{
+  "access_token": "...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "scope": "profile email"
+}
+```
+
+### 5. Validating an Access Token
+
+`GET /api/oauth/validate?token={access_token}`
+
+Check if an access token is currently active and valid.
+
+**Success Response (200 OK):**
+
+```json
+{
+  "active": true,
+  "scope": "profile email",
+  "client_id": "...",
+  "user_id": "...",
+  "expires_in": 3599
+}
+```
+
+**Error Response (401 Unauthorized):**
+
+```json
+{
+  "active": false
+}
+```
+
+### 6. Revoking an Access Token (Logout)
+
+`POST /api/oauth/logout`
+
+Invalidate an access token, effectively logging the user out.
+
+**Request Body:**
+
+```json
+{
+  "token": "THE_ACCESS_TOKEN_TO_REVOKE"
+}
+```
+
+**Success Response (200 OK):**
+
+```json
+{
+  "success": true,
+  "message": "Token successfully revoked."
+}
+```
+
 ## 📚 API Reference
 
 ### Authentication Endpoints
@@ -305,7 +450,7 @@ src/
 ├── components/            # Reusable components
 ├── lib/                   # Utility libraries
 │   ├── firebase-client.ts # Firebase client config
-│   ├── firebase.ts        # Firebase admin config
+│   ├── firebase.ts        # Firebase utility functions (client-side)
 │   ├── session.ts         # Session management
 │   └── utils.ts           # Helper utilities
 └── types/                 # TypeScript definitions

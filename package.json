@@ -10,11 +10,20 @@
     "check-env": "echo 'Create .env.local with Firebase config - see console for details'"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/crypto-js": "^4.2.2",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/uuid": "^10.0.0",
+    "bcryptjs": "^3.0.2",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.1",
     "firebase": "^12.1.0",
+    "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.1.5",
     "next": "15.4.6",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

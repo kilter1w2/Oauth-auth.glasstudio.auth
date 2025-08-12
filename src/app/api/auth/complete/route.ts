@@ -7,7 +7,7 @@ import {
   updateUser,
   logSecurityEvent,
   recordUsageStats,
-  adminDb,
+  db,
 } from '@/lib/firebase';
 import {
   generateAuthorizationCode,
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
       createdAt: Timestamp.fromDate(new Date()),
     };
 
-    await setDoc(doc(adminDb!, 'authorization_codes', authCode), authCodeData);
+    await setDoc(doc(db, 'authorization_codes', authCode), authCodeData);
 
     // Update OAuth session
     await updateOAuthSession(sessionId, {

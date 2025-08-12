@@ -67,12 +67,6 @@ export class SessionManager {
       process.env.SESSION_SECRET ||
       "glasstudio-default-secret-key-2024";
 
-    if (typeof window !== "undefined" && secret.includes("default")) {
-      console.warn(
-        "Using default session secret. Please set NEXT_PUBLIC_SESSION_SECRET in production.",
-      );
-    }
-
     return secret;
   }
 
@@ -100,8 +94,10 @@ export class SessionManager {
 
       return decrypted;
     } catch (error) {
-      console.error("Session decryption error:", error);
-      throw new Error("Failed to decrypt session data");
+      // Handle malformed UTF-8 data or other decryption errors
+      this.debugSession("Session decryption failed, clearing corrupted session", error);
+      this.clearSession(); // Clear corrupted session data
+      return "";
     }
   }
 
@@ -192,36 +188,51 @@ export class SessionManager {
   getSessionFromCookies(): SessionData | null {
     if (typeof window === "undefined") return null;
 
-    const cookies = document.cookie.split(";").reduce(
-      (acc, cookie) => {
-        const [key, value] = cookie.trim().split("=");
-        acc[key] = value;
-        return acc;
-      },
-      {} as Record<string, string>,
-    );
-
-    const sessionCookie = cookies[SESSION_CONFIG.sessionCookieName];
-    if (!sessionCookie) return null;
-
     try {
-      const decryptedSession = this.decryptData(sessionCookie);
-      const sessionData: SessionData = JSON.parse(decryptedSession);
+      const cookies = document.cookie.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=");
+          if (key && value) {
+            acc[key] = decodeURIComponent(value);
+          }
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+
+      const encryptedSession = cookies[SESSION_CONFIG.sessionCookieName];
+      if (!encryptedSession) {
+        this.debugSession("No session cookie found");
+        return null;
+      }
+
+      this.debugSession("Found session cookie, attempting to decrypt");
+
+      const decryptedData = this.decryptData(encryptedSession);
+      
+      // If decryption failed (returned empty string), return null
+      if (!decryptedData) {
+        this.debugSession("Session decryption failed, session cleared");
+        return null;
+      }
+
+      const sessionData: SessionData = JSON.parse(decryptedData);
 
       // Check if session is expired
       if (new Date(sessionData.expiresAt) < new Date()) {
+        this.debugSession("Session expired", sessionData.expiresAt);
         this.clearSession();
         return null;
       }
 
-      // Update last activity
-      sessionData.lastActivity = new Date().toISOString();
-      this.sessionData = sessionData;
-      this.saveSessionToCookies(sessionData);
+      this.debugSession("Session loaded successfully", {
+        userId: sessionData.userId,
+        expiresAt: sessionData.expiresAt,
+      });
 
       return sessionData;
     } catch (error) {
-      console.error("Failed to parse session cookie:", error);
+      this.debugSession("Failed to get session from cookies, clearing session", error);
       this.clearSession();
       return null;
     }
@@ -291,6 +302,8 @@ export class SessionManager {
 
   // Clear session
   clearSession(): void {
+    if (typeof window === "undefined") return;
+
     this.sessionData = null;
 
     if (this.refreshTimer) {
@@ -298,11 +311,19 @@ export class SessionManager {
       this.refreshTimer = null;
     }
 
-    if (typeof window !== "undefined") {
-      // Clear cookies
-      document.cookie = `${SESSION_CONFIG.sessionCookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      document.cookie = `${SESSION_CONFIG.refreshCookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-    }
+    // Clear cookies with multiple approaches to ensure they're removed
+    const cookieOptions = [
+      `${SESSION_CONFIG.sessionCookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`,
+      `${SESSION_CONFIG.refreshCookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`,
+      `${SESSION_CONFIG.sessionCookieName}=; Max-Age=0; path=/;`,
+      `${SESSION_CONFIG.refreshCookieName}=; Max-Age=0; path=/;`,
+    ];
+
+    cookieOptions.forEach(cookie => {
+      document.cookie = cookie;
+    });
+
+    this.debugSession("Session and cookies cleared");
   }
 
   // Start automatic session refresh

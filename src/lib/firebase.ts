@@ -32,10 +32,8 @@ import {
   ApiCredentials,
   OAuthSession,
   UsageStats,
-  AuthorizationCode,
-  AccessToken,
-  RefreshToken,
   SecurityLog,
+  AccessToken,
 } from "@/types";
 
 // Firebase Client Configuration
@@ -48,136 +46,35 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Firebase Admin Configuration (Server-side only)
-const getAdminConfig = () => {
-  if (typeof window !== "undefined") return null;
-
-  const projectId = process.env.FIREBASE_PROJECT_ID;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-
-  if (!projectId || !privateKey || !clientEmail) {
-    console.warn(
-      "Firebase Admin SDK credentials not found. Server-side features will be limited.",
-    );
-    return null;
-  }
-
-  return {
-    projectId,
-    privateKey,
-    clientEmail,
-  };
-};
-
 // Initialize Firebase Client
-let app: FirebaseApp | undefined;
-if (typeof window !== "undefined" && !getApps().length) {
+let app: FirebaseApp;
+if (!getApps().length) {
   app = initializeApp(firebaseConfig);
-} else if (typeof window !== "undefined") {
+} else {
   app = getApps()[0];
 }
 
-// Initialize Firebase Admin (Server-side only) - using dynamic imports
-let adminApp: any = null;
-let adminAppPromise: Promise<any> | null = null;
-
-const getAdminApp = async () => {
-  if (typeof window !== "undefined") return null;
-
-  if (adminApp) return adminApp;
-
-  if (!adminAppPromise) {
-    adminAppPromise = (async () => {
-      try {
-        const {
-          initializeApp: initializeAdminApp,
-          getApps: getAdminApps,
-          cert,
-        } = await import("firebase-admin/app");
-        const adminConfig = getAdminConfig();
-
-        if (!adminConfig) return null;
-
-        if (!getAdminApps().length) {
-          adminApp = initializeAdminApp({
-            credential: cert(adminConfig),
-          });
-          console.log("Firebase Admin SDK initialized successfully");
-        } else {
-          adminApp = getAdminApps()[0];
-        }
-
-        return adminApp;
-      } catch (error) {
-        console.error("Failed to initialize Firebase Admin SDK:", error);
-        return null;
-      }
-    })();
-  }
-
-  return adminAppPromise;
-};
-
 // Client-side Firebase services
-export const auth: Auth | null =
-  typeof window !== "undefined" && app ? getAuth(app) : null;
-export const db: Firestore | null =
-  typeof window !== "undefined" && app ? getFirestore(app) : null;
-export const googleProvider: GoogleAuthProvider | null =
-  typeof window !== "undefined" ? new GoogleAuthProvider() : null;
-
-// Server-side Firebase services (using dynamic imports)
-export const getAdminAuth = async () => {
-  if (typeof window !== "undefined") return null;
-
-  try {
-    const app = await getAdminApp();
-    if (!app) return null;
-
-    const { getAuth } = await import("firebase-admin/auth");
-    return getAuth(app);
-  } catch (error) {
-    console.error("Failed to get Admin Auth:", error);
-    return null;
-  }
-};
-
-export const getAdminDb = async () => {
-  if (typeof window !== "undefined") return null;
-
-  try {
-    const app = await getAdminApp();
-    if (!app) return null;
-
-    const { getFirestore } = await import("firebase-admin/firestore");
-    return getFirestore(app);
-  } catch (error) {
-    console.error("Failed to get Admin Firestore:", error);
-    return null;
-  }
-};
-
-// Legacy exports for compatibility (will be null on client-side)
-export const adminAuth: any = null;
-export const adminDb: any = null;
+export const auth: Auth = getAuth(app);
+export const db: Firestore = getFirestore(app);
+export const googleProvider: GoogleAuthProvider = new GoogleAuthProvider();
 
 // Collection References
 export const COLLECTIONS = {
   USERS: "users",
   API_CREDENTIALS: "api_credentials",
   OAUTH_SESSIONS: "oauth_sessions",
-  AUTHORIZATION_CODES: "authorization_codes",
-  ACCESS_TOKENS: "access_tokens",
-  REFRESH_TOKENS: "refresh_tokens",
   USAGE_STATS: "usage_stats",
   SECURITY_LOGS: "security_logs",
+  ACCESS_TOKENS: "access_tokens",
 } as const;
 
 // Utility Functions
 export const convertTimestamp = (timestamp: Timestamp | Date): Date => {
-  if (timestamp instanceof Date) return timestamp;
-  return timestamp.toDate();
+  if (timestamp instanceof Timestamp) {
+    return timestamp.toDate();
+  }
+  return timestamp;
 };
 
 export const convertToTimestamp = (date: Date): Timestamp => {
@@ -186,33 +83,26 @@ export const convertToTimestamp = (date: Date): Timestamp => {
 
 // Authentication Functions
 export const signInWithGoogle = async (): Promise<FirebaseUser | null> => {
-  if (!auth || !googleProvider) return null;
-
   try {
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
   } catch (error) {
-    console.error("Google sign-in error:", error);
-    throw error;
+    console.error("Error signing in with Google:", error);
+    return null;
   }
 };
 
 export const signOutUser = async (): Promise<void> => {
-  if (!auth) return;
-
   try {
     await signOut(auth);
   } catch (error) {
-    console.error("Sign-out error:", error);
-    throw error;
+    console.error("Error signing out:", error);
   }
 };
 
 export const onAuthStateChange = (
   callback: (user: FirebaseUser | null) => void,
 ) => {
-  if (!auth) return () => {};
-
   return onAuthStateChanged(auth, callback);
 };
 
@@ -220,64 +110,45 @@ export const onAuthStateChange = (
 export const createUser = async (
   userData: Omit<User, "id" | "createdAt" | "updatedAt">,
 ): Promise<string> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) {
-    throw new Error(
-      "Database not initialized. Please check your Firebase configuration.",
-    );
-  }
-
-  const now = new Date();
-  const userDoc = {
+  const newUser = {
     ...userData,
-    createdAt: convertToTimestamp(now),
-    updatedAt: convertToTimestamp(now),
+    createdAt: convertToTimestamp(new Date()),
+    updatedAt: convertToTimestamp(new Date()),
   };
 
-  const docRef = await addDoc(collection(database, COLLECTIONS.USERS), userDoc);
-  return docRef.id;
+  const userRef = await addDoc(collection(db, COLLECTIONS.USERS), newUser);
+  return userRef.id;
 };
 
 export const getUser = async (userId: string): Promise<User | null> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) {
-    console.warn("Database not initialized, returning null");
-    return null;
-  }
-
-  const userDoc = await getDoc(doc(database, COLLECTIONS.USERS, userId));
+  const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, userId));
   if (!userDoc.exists()) return null;
 
   const data = userDoc.data();
   return {
-    id: userDoc.id,
     ...data,
+    id: userDoc.id,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
   } as User;
 };
 
 export const getUserByEmail = async (email: string): Promise<User | null> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) {
-    console.warn("Database not initialized, returning null");
-    return null;
-  }
-
   const q = query(
-    collection(database, COLLECTIONS.USERS),
+    collection(db, COLLECTIONS.USERS),
     where("email", "==", email),
+    limit(1),
   );
-  const querySnapshot = await getDocs(q);
 
+  const querySnapshot = await getDocs(q);
   if (querySnapshot.empty) return null;
 
   const userDoc = querySnapshot.docs[0];
   const data = userDoc.data();
 
   return {
-    id: userDoc.id,
     ...data,
+    id: userDoc.id,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
   } as User;
@@ -287,107 +158,87 @@ export const updateUser = async (
   userId: string,
   updates: Partial<User>,
 ): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
-  const updateData = {
+  const userRef = doc(db, COLLECTIONS.USERS, userId);
+  await updateDoc(userRef, {
     ...updates,
     updatedAt: convertToTimestamp(new Date()),
-  };
-
-  await updateDoc(doc(database, COLLECTIONS.USERS, userId), updateData);
+  });
 };
 
 // API Credentials Management
 export const createApiCredentials = async (
   credentialsData: Omit<ApiCredentials, "id" | "createdAt" | "updatedAt">,
 ): Promise<string> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
-  const now = new Date();
-  const credentialsDoc = {
+  const newCredentials = {
     ...credentialsData,
-    createdAt: convertToTimestamp(now),
-    updatedAt: convertToTimestamp(now),
+    createdAt: convertToTimestamp(new Date()),
+    updatedAt: convertToTimestamp(new Date()),
   };
 
-  const docRef = await addDoc(
-    collection(database, COLLECTIONS.API_CREDENTIALS),
-    credentialsDoc,
+  const credRef = await addDoc(
+    collection(db, COLLECTIONS.API_CREDENTIALS),
+    newCredentials,
   );
-  return docRef.id;
+  return credRef.id;
 };
 
 export const getApiCredentials = async (
   credentialId: string,
 ): Promise<ApiCredentials | null> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
-  const credentialDoc = await getDoc(
-    doc(database, COLLECTIONS.API_CREDENTIALS, credentialId),
+  const credDoc = await getDoc(
+    doc(db, COLLECTIONS.API_CREDENTIALS, credentialId),
   );
-  if (!credentialDoc.exists()) return null;
+  if (!credDoc.exists()) return null;
 
-  const data = credentialDoc.data();
+  const data = credDoc.data();
   return {
-    id: credentialDoc.id,
     ...data,
+    id: credDoc.id,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
-    lastUsed: data.lastUsed ? convertTimestamp(data.lastUsed) : undefined,
   } as ApiCredentials;
 };
 
 export const getApiCredentialsByClientId = async (
   clientId: string,
 ): Promise<ApiCredentials | null> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const q = query(
-    collection(database, COLLECTIONS.API_CREDENTIALS),
+    collection(db, COLLECTIONS.API_CREDENTIALS),
     where("clientId", "==", clientId),
+    limit(1),
   );
-  const querySnapshot = await getDocs(q);
 
+  const querySnapshot = await getDocs(q);
   if (querySnapshot.empty) return null;
 
-  const credentialDoc = querySnapshot.docs[0];
-  const data = credentialDoc.data();
+  const credDoc = querySnapshot.docs[0];
+  const data = credDoc.data();
 
   return {
-    id: credentialDoc.id,
     ...data,
+    id: credDoc.id,
     createdAt: convertTimestamp(data.createdAt),
     updatedAt: convertTimestamp(data.updatedAt),
-    lastUsed: data.lastUsed ? convertTimestamp(data.lastUsed) : undefined,
   } as ApiCredentials;
 };
 
 export const getUserApiCredentials = async (
   userId: string,
 ): Promise<ApiCredentials[]> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const q = query(
-    collection(database, COLLECTIONS.API_CREDENTIALS),
+    collection(db, COLLECTIONS.API_CREDENTIALS),
     where("userId", "==", userId),
     orderBy("createdAt", "desc"),
   );
 
   const querySnapshot = await getDocs(q);
-
   return querySnapshot.docs.map((doc) => {
     const data = doc.data();
     return {
-      id: doc.id,
       ...data,
+      id: doc.id,
       createdAt: convertTimestamp(data.createdAt),
       updatedAt: convertTimestamp(data.updatedAt),
-      lastUsed: data.lastUsed ? convertTimestamp(data.lastUsed) : undefined,
     } as ApiCredentials;
   });
 };
@@ -396,27 +247,49 @@ export const updateApiCredentials = async (
   credentialId: string,
   updates: Partial<ApiCredentials>,
 ): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
-  const updateData = {
+  const credRef = doc(db, COLLECTIONS.API_CREDENTIALS, credentialId);
+  await updateDoc(credRef, {
     ...updates,
     updatedAt: convertToTimestamp(new Date()),
-  };
-
-  await updateDoc(
-    doc(database, COLLECTIONS.API_CREDENTIALS, credentialId),
-    updateData,
-  );
+  });
 };
 
 export const deleteApiCredentials = async (
   credentialId: string,
 ): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
+  await deleteDoc(doc(db, COLLECTIONS.API_CREDENTIALS, credentialId));
+};
 
-  await deleteDoc(doc(database, COLLECTIONS.API_CREDENTIALS, credentialId));
+export const getAccessToken = async (
+  token: string,
+): Promise<AccessToken | null> => {
+  const tokenDoc = await getDoc(doc(db, COLLECTIONS.ACCESS_TOKENS, token));
+  if (!tokenDoc.exists()) return null;
+
+  const data = tokenDoc.data();
+  // The document ID is the token itself.
+  return {
+    token: tokenDoc.id,
+    userId: data.userId,
+    credentialId: data.credentialId,
+    sessionId: data.sessionId,
+    scopes: data.scopes,
+    tokenType: data.tokenType,
+    isRevoked: data.isRevoked,
+    createdAt: convertTimestamp(data.createdAt),
+    expiresAt: convertTimestamp(data.expiresAt),
+  } as AccessToken;
+};
+
+export const revokeAccessToken = async (token: string): Promise<void> => {
+  const tokenRef = doc(db, COLLECTIONS.ACCESS_TOKENS, token);
+  // Check if the document exists before updating to avoid creating new documents.
+  const tokenSnap = await getDoc(tokenRef);
+  if (tokenSnap.exists()) {
+    await updateDoc(tokenRef, {
+      isRevoked: true,
+    });
+  }
 };
 
 // OAuth Session Management
@@ -426,31 +299,24 @@ export const createOAuthSession = async (
     "createdAt" | "expiresAt" | "authorizedAt" | "tokenExpiresAt"
   > & { expiresAt: Date },
 ): Promise<string> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
-  const now = new Date();
-  const sessionDoc = {
+  const newSession = {
     ...sessionData,
-    createdAt: convertToTimestamp(now),
+    createdAt: convertToTimestamp(new Date()),
     expiresAt: convertToTimestamp(sessionData.expiresAt),
   };
 
-  const docRef = await addDoc(
-    collection(database, COLLECTIONS.OAUTH_SESSIONS),
-    sessionDoc,
+  const sessionRef = await addDoc(
+    collection(db, COLLECTIONS.OAUTH_SESSIONS),
+    newSession,
   );
-  return docRef.id;
+  return sessionRef.id;
 };
 
 export const getOAuthSession = async (
   sessionId: string,
 ): Promise<OAuthSession | null> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const sessionDoc = await getDoc(
-    doc(database, COLLECTIONS.OAUTH_SESSIONS, sessionId),
+    doc(db, COLLECTIONS.OAUTH_SESSIONS, sessionId),
   );
   if (!sessionDoc.exists()) return null;
 
@@ -472,9 +338,6 @@ export const updateOAuthSession = async (
   sessionId: string,
   updates: Partial<OAuthSession>,
 ): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const updateData: any = { ...updates };
 
   if (updates.expiresAt) {
@@ -488,7 +351,7 @@ export const updateOAuthSession = async (
   }
 
   await updateDoc(
-    doc(database, COLLECTIONS.OAUTH_SESSIONS, sessionId),
+    doc(db, COLLECTIONS.OAUTH_SESSIONS, sessionId),
     updateData,
   );
 };
@@ -498,13 +361,10 @@ export const recordUsageStats = async (
   credentialId: string,
   success: boolean,
 ): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const today = new Date().toISOString().split("T")[0];
   const statsId = `${credentialId}_${today}`;
 
-  const statsRef = doc(database, COLLECTIONS.USAGE_STATS, statsId);
+  const statsRef = doc(db, COLLECTIONS.USAGE_STATS, statsId);
   const statsDoc = await getDoc(statsRef);
 
   if (statsDoc.exists()) {
@@ -537,25 +397,19 @@ export const recordUsageStats = async (
 export const logSecurityEvent = async (
   logData: Omit<SecurityLog, "id" | "timestamp">,
 ): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const logDoc = {
     ...logData,
     timestamp: convertToTimestamp(new Date()),
   };
 
-  await addDoc(collection(database, COLLECTIONS.SECURITY_LOGS), logDoc);
+  await addDoc(collection(db, COLLECTIONS.SECURITY_LOGS), logDoc);
 };
 
 // Cleanup expired sessions and tokens
 export const cleanupExpiredSessions = async (): Promise<void> => {
-  const database = typeof window === "undefined" ? await getAdminDb() : db;
-  if (!database) throw new Error("Database not initialized");
-
   const now = new Date();
   const expiredSessionsQuery = query(
-    collection(database, COLLECTIONS.OAUTH_SESSIONS),
+    collection(db, COLLECTIONS.OAUTH_SESSIONS),
     where("expiresAt", "<", convertToTimestamp(now)),
   );
 
@@ -568,8 +422,6 @@ export const cleanupExpiredSessions = async (): Promise<void> => {
 export default {
   auth,
   db,
-  getAdminAuth,
-  getAdminDb,
   googleProvider,
   signInWithGoogle,
   signOutUser,
@@ -584,6 +436,8 @@ export default {
   getUserApiCredentials,
   updateApiCredentials,
   deleteApiCredentials,
+  getAccessToken,
+  revokeAccessToken,
   createOAuthSession,
   getOAuthSession,
   updateOAuthSession,

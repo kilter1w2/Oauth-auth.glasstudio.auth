@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { onAuthStateChange, signOutUser } from "@/lib/firebase-client";
+import { 
+  onAuthStateChange, 
+  signOutUser, 
+  getUserApiCredentials, 
+  createApiCredentials 
+} from "@/lib/firebase";
 import { User as FirebaseUser } from "firebase/auth";
-import { ApiCredentials, UsageStats } from "@/types";
-import { SessionManager, useSession } from "@/lib/session";
+import { ApiCredentials } from "@/types";
+import { useSession } from "@/lib/session";
+import { v4 as uuidv4 } from 'uuid';
+import bcrypt from 'bcryptjs';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
@@ -33,98 +40,90 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    // Check session first
-    const sessionUser = getCurrentUser();
-    if (sessionUser) {
-      setUser(sessionUser as FirebaseUser);
-      setLoading(false);
-      fetchCredentials();
-      updateActivity();
-      return;
-    }
-
-    // Fallback to Firebase auth state change
     const unsubscribe = onAuthStateChange((user) => {
       setUser(user);
       setLoading(false);
       if (user) {
-        // Create session if user is authenticated via Firebase
-        const sessionManager = SessionManager.getInstance();
-        sessionManager.createSession(user);
-        fetchCredentials();
-        updateActivity();
+        fetchCredentials(user.uid);
       }
     });
 
     return () => unsubscribe();
   }, []);
 
-  const fetchCredentials = async () => {
-    if (!user && !isAuthenticated()) return;
+  const fetchCredentials = async (userId: string) => {
+    if (!userId) return;
 
     try {
-      // Update session activity when making API calls
-      updateActivity();
-
-      const response = await fetch("/api/credentials");
-      if (response.ok) {
-        const data = await response.json();
-        setCredentials(data.credentials || []);
-      } else if (response.status === 401) {
-        // Session expired, clear and redirect
-        clearSession();
-        setUser(null);
-        window.location.href = "/auth/login";
-      }
+      const creds = await getUserApiCredentials(userId);
+      setCredentials(creds || []);
     } catch (error) {
       console.error("Failed to fetch credentials:", error);
+      setCredentials([]);
     }
   };
 
   const handleCreateCredential = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      alert("You must be logged in to create an application.");
+      return;
+    }
     setCreateLoading(true);
 
     try {
-      // Update session activity
-      updateActivity();
+      const clientId = uuidv4();
+      const clientSecretRaw = uuidv4();
+      const salt = await bcrypt.genSalt(10);
+      const clientSecretHashed = await bcrypt.hash(clientSecretRaw, salt);
+      const apiKey = uuidv4();
 
-      const response = await fetch("/api/credentials", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...formData,
-          redirectUris: formData.redirectUris
-            .split(",")
-            .map((uri) => uri.trim()),
-          allowedOrigins: formData.allowedOrigins
-            .split(",")
-            .map((origin) => origin.trim()),
-        }),
+      const newCredentialData: Omit<ApiCredentials, 'id' | 'createdAt' | 'updatedAt'> = {
+        userId: user.uid,
+        name: formData.name,
+        description: formData.description,
+        clientId,
+        clientSecret: clientSecretHashed,
+        apiKey,
+        redirectUris: formData.redirectUris
+          .split(",")
+          .map((uri) => uri.trim())
+          .filter(uri => uri.length > 0),
+        allowedOrigins: formData.allowedOrigins
+          .split(",")
+          .map((origin) => origin.trim())
+          .filter(origin => origin.length > 0),
+        scopes: formData.scopes,
+        isActive: true,
+        rateLimit: { maxRequests: 1000, windowMs: 60000, enabled: true },
+      };
+
+      await createApiCredentials(newCredentialData);
+
+      const displayCredential = {
+        ...newCredentialData,
+        id: 'temp-' + Date.now(),
+        clientSecret: clientSecretRaw, // Show raw secret only once
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      setCredentials([displayCredential, ...credentials]);
+
+      setShowCreateForm(false);
+      setFormData({
+        name: "",
+        description: "",
+        redirectUris: "",
+        allowedOrigins: "",
+        scopes: ["profile", "email"],
       });
 
-      if (response.ok) {
-        await fetchCredentials();
-        setShowCreateForm(false);
-        setFormData({
-          name: "",
-          description: "",
-          redirectUris: "",
-          allowedOrigins: "",
-          scopes: ["profile", "email"],
-        });
-      } else if (response.status === 401) {
-        // Session expired
-        clearSession();
-        setUser(null);
-        window.location.href = "/auth/login";
-      } else {
-        console.error("Failed to create credentials");
-      }
+      alert(`Application Created!\nClient ID: ${clientId}\nClient Secret: ${clientSecretRaw}\n\nIMPORTANT: Copy your client secret now. You will not be able to see it again.`);
+
     } catch (error) {
-      console.error("Error creating credentials:", error);
+      console.error("Failed to create credentials:", error);
+      alert("An unexpected error occurred while creating credentials.");
     } finally {
       setCreateLoading(false);
     }
