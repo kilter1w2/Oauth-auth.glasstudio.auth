@@ -177,9 +177,7 @@ export default function DocsPage() {
                     For Developers
                   </h3>
                   <p className="text-gray-700 mb-4">
-                    Integrate OAuth authentication into your apps with just a
-                    few API calls. Get client credentials, generate OAuth URLs,
-                    and manage user access.
+                    Create OAuth apps, view client ID and client secret, and see which users have connected to your app with OAuth. Manage your applications and monitor user connections.
                   </p>
                   <button
                     onClick={() => setActiveTab("developer")}
@@ -195,8 +193,7 @@ export default function DocsPage() {
                     For Users
                   </h3>
                   <p className="text-gray-700 mb-4">
-                    See which apps you've authorized, manage your permissions,
-                    and control your data access with full transparency.
+                    Track which apps use OAuth and which you can access. See avatar, name, username, and much more. Manage your connected apps and control data access.
                   </p>
                   <button
                     onClick={() => setActiveTab("user")}
@@ -358,11 +355,10 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
               {/* App Management */}
               <div className="mb-8">
                 <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-                  📱 App Management Dashboard
+                  📱 Developer Dashboard - App Management
                 </h3>
                 <p className="text-gray-700 mb-4">
-                  Access your developer dashboard to manage your OAuth
-                  applications:
+                  Access your developer dashboard to manage your OAuth applications, view credentials, and monitor connected users:
                 </p>
                 <div className="bg-gray-50 rounded-lg p-6">
                   <div className="grid md:grid-cols-2 gap-4">
@@ -371,7 +367,7 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
                       <div>
                         <h4 className="font-semibold">View App Details</h4>
                         <p className="text-sm text-gray-600">
-                          See your client ID, secret, and app configuration
+                          See your client ID, client secret, and app configuration
                         </p>
                       </div>
                     </div>
@@ -380,16 +376,16 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
                       <div>
                         <h4 className="font-semibold">Connected Users</h4>
                         <p className="text-sm text-gray-600">
-                          Track which users have authorized your app
+                          Track which users have authorized your app with OAuth
                         </p>
                       </div>
                     </div>
                     <div className="flex items-start space-x-3">
                       <Key className="h-5 w-5 text-purple-600 mt-1" />
                       <div>
-                        <h4 className="font-semibold">API Keys</h4>
+                        <h4 className="font-semibold">API Keys Management</h4>
                         <p className="text-sm text-gray-600">
-                          Manage your API credentials and rate limits
+                          View and manage API keys for your applications
                         </p>
                       </div>
                     </div>
@@ -403,6 +399,32 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Dashboard Features */}
+                  <div className="mt-6 p-4 bg-white rounded-lg border">
+                    <h5 className="font-semibold text-gray-900 mb-3">Dashboard Features:</h5>
+                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <h6 className="font-medium text-blue-600 mb-2">📊 Analytics</h6>
+                        <ul className="space-y-1 text-gray-600">
+                          <li>• Total connected users</li>
+                          <li>• API usage statistics</li>
+                          <li>• Success/failure rates</li>
+                          <li>• User activity tracking</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h6 className="font-medium text-green-600 mb-2">🔐 Security</h6>
+                        <ul className="space-y-1 text-gray-600">
+                          <li>• Credential management</li>
+                          <li>• Rate limiting controls</li>
+                          <li>• Access token monitoring</li>
+                          <li>• Security event logging</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="mt-6">
                     <a
                       href="/dashboard"
@@ -477,7 +499,7 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
                 </h3>
                 <p className="text-gray-700 mb-4">
                   As a user, you have full control over which applications can
-                  access your account. Here's how to manage your connected apps:
+                  access your account. Track which apps use OAuth and which you can access:
                 </p>
 
                 <div className="space-y-6">
@@ -486,7 +508,7 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
                       🔍 View Your Connected Apps
                     </h4>
                     <p className="text-green-800 mb-3">
-                      See all applications that have access to your account:
+                      See all applications that have access to your account with avatar, name, username, and much more:
                     </p>
                     <div className="bg-white rounded-lg p-4 border">
                       <div className="flex items-center space-x-4 mb-3">
@@ -500,6 +522,9 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
                           </p>
                           <p className="text-xs text-gray-500">
                             Connected on: March 15, 2024
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Last access: March 20, 2024
                           </p>
                         </div>
                         <button className="text-red-600 hover:text-red-800">
@@ -563,6 +588,45 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
 # You can re-authorize later if needed`}
                     </CodeBlock>
                   </div>
+
+                  {/* User Profile Management */}
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                    <h4 className="text-lg font-semibold text-purple-900 mb-3">
+                      👤 User Profile Management
+                    </h4>
+                    <p className="text-purple-800 mb-3">
+                      Manage your profile information that apps can access:
+                    </p>
+                    <div className="bg-white rounded-lg p-4 border">
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <h6 className="font-medium text-purple-600 mb-2">Profile Information</h6>
+                          <ul className="space-y-1 text-sm text-gray-600">
+                            <li>• Username and display name</li>
+                            <li>• Profile avatar/picture</li>
+                            <li>• Email address</li>
+                            <li>• Account creation date</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h6 className="font-medium text-purple-600 mb-2">Privacy Controls</h6>
+                          <ul className="space-y-1 text-sm text-gray-600">
+                            <li>• Control what apps can see</li>
+                            <li>• Manage data sharing preferences</li>
+                            <li>• View access history</li>
+                            <li>• Set profile visibility</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <a
+                      href="/user/profile"
+                      className="inline-flex items-center mt-3 text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Manage My Profile
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
@@ -588,9 +652,9 @@ https://myapp.com/callback?code=auth_code_here&state=secure_random_string`}
 
                 <ApiEndpoint
                   method="GET"
-                  endpoint="/api/generate/{client-id}/{client-secret}/grab/"
-                  description="Generates OAuth authorization URL for user login. Returns JSON with encrypted OAuth URL."
-                  example={`curl "http://localhost:3000/api/generate/your_client_id/your_client_secret/grab/?redirect_uri=https://yourapp.com/callback&scope=profile email&state=random123"`}
+                  endpoint="/api/generate/{id}/{apiKey}/grab"
+                  description="Your requested OAuth URL generator. Generates secure OAuth authorization URL for user login."
+                  example={`curl "http://localhost:3000/api/generate/your_client_id/your_api_key/grab?redirect_uri=https://yourapp.com/callback&scope=profile email&state=random123"`}
                 />
 
                 <ApiEndpoint
@@ -604,7 +668,7 @@ http://localhost:3000/api/oauth/authorize?client_id=your_client_id&redirect_uri=
                 <ApiEndpoint
                   method="POST"
                   endpoint="/api/oauth/token"
-                  description="Exchange authorization code for access token."
+                  description="Token exchange endpoint. Exchange authorization code for access token."
                   example={`curl -X POST http://localhost:3000/api/oauth/token \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -618,8 +682,8 @@ http://localhost:3000/api/oauth/authorize?client_id=your_client_id&redirect_uri=
 
                 <ApiEndpoint
                   method="GET"
-                  endpoint="/api/oauth2/token?{encrypted-params}"
-                  description="Secure redirect URL with encrypted user ID and verification parameters. Generated automatically by the system."
+                  endpoint="/api/oauth2/token?{128-char-encrypted-userid}/{6-char-encrypted-id}/verify?={website-url}/{request-id}/{user-id}/{expiry-timestamp}"
+                  description="Secure redirect URL with encrypted parameters. Generated automatically by the system with your specified URL structure."
                 />
               </div>
 
@@ -632,27 +696,28 @@ http://localhost:3000/api/oauth/authorize?client_id=your_client_id&redirect_uri=
                 <ApiEndpoint
                   method="POST"
                   endpoint="/api/credentials"
-                  description="Create new app credentials (client ID and secret)."
+                  description="Create new API credentials (client ID and secret)."
                   example={`curl -X POST http://localhost:3000/api/credentials \\
   -H "Content-Type: application/json" \\
   -d '{
     "appName": "My App",
     "description": "My OAuth app",
-    "redirectUris": ["https://myapp.com/callback"]
+    "redirectUris": ["https://myapp.com/callback"],
+    "scopes": ["profile", "email"]
   }'`}
                 />
 
                 <ApiEndpoint
                   method="GET"
                   endpoint="/api/keys/{userId}"
-                  description="View and manage API keys for a specific user."
+                  description="API keys management. View and manage API keys for a specific user."
                   example={`curl http://localhost:3000/api/keys/user_123456`}
                 />
 
                 <ApiEndpoint
                   method="GET"
                   endpoint="/api/apps/{clientId}"
-                  description="View app details, credentials, and connected users."
+                  description="View app details, credentials, and connected users with analytics."
                   example={`curl http://localhost:3000/api/apps/your_client_id`}
                 />
               </div>
@@ -666,7 +731,7 @@ http://localhost:3000/api/oauth/authorize?client_id=your_client_id&redirect_uri=
                 <ApiEndpoint
                   method="GET"
                   endpoint="/api/user/apps"
-                  description="List all apps the user has authorized with their details."
+                  description="List all apps the user has authorized with their details (avatar, name, username, etc)."
                   example={`curl http://localhost:3000/api/user/apps \\
   -H "Authorization: Bearer your_access_token"`}
                 />
@@ -686,6 +751,75 @@ http://localhost:3000/api/oauth/authorize?client_id=your_client_id&redirect_uri=
                   example={`curl http://localhost:3000/api/user/profile \\
   -H "Authorization: Bearer your_access_token"`}
                 />
+              </div>
+
+              {/* OAuth URL Structure */}
+              <div className="mt-8">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-4">
+                  🔐 OAuth URL Structure
+                </h3>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-yellow-900 mb-3">
+                    Generated OAuth URL Format
+                  </h4>
+                  <p className="text-yellow-800 mb-3">
+                    When you call the generate endpoint, you'll receive a secure
+                    OAuth URL with this exact structure:
+                  </p>
+                  <CodeBlock language="text">
+                    {`/api/oauth2/token?{128-char-encrypted-userid}/{6-char-randomized-encrypted-id}/verify?={registered-website-url}/{request-id}/{user-id}/{expiry-timestamp}`}
+                  </CodeBlock>
+                  <div className="mt-4 space-y-2 text-sm">
+                    <div className="flex">
+                      <span className="font-semibold text-yellow-900 w-40">
+                        128-char-userid:
+                      </span>
+                      <span className="text-yellow-800">
+                        User ID encrypted 128 characters for security
+                      </span>
+                    </div>
+                    <div className="flex">
+                      <span className="font-semibold text-yellow-900 w-40">
+                        6-char-id:
+                      </span>
+                      <span className="text-yellow-800">
+                        Random ID encrypted 10 times, 6 characters
+                      </span>
+                    </div>
+                    <div className="flex">
+                      <span className="font-semibold text-yellow-900 w-40">
+                        website-url:
+                      </span>
+                      <span className="text-yellow-800">
+                        The website URL that is registered in app dev used
+                      </span>
+                    </div>
+                    <div className="flex">
+                      <span className="font-semibold text-yellow-900 w-40">
+                        request-id:
+                      </span>
+                      <span className="text-yellow-800">
+                        Unique request identifier
+                      </span>
+                    </div>
+                    <div className="flex">
+                      <span className="font-semibold text-yellow-900 w-40">
+                        user-id:
+                      </span>
+                      <span className="text-yellow-800">
+                        Numeric user ID
+                      </span>
+                    </div>
+                    <div className="flex">
+                      <span className="font-semibold text-yellow-900 w-40">
+                        expiry-timestamp:
+                      </span>
+                      <span className="text-yellow-800">
+                        Time to make like expired
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -714,9 +848,9 @@ http://localhost:3000/api/oauth/authorize?client_id=your_client_id&redirect_uri=
                     </h4>
                     <CodeBlock language="javascript">
                       {`// Generate OAuth URL for user authorization
-async function generateOAuthUrl(clientId, clientSecret, redirectUri) {
+async function generateOAuthUrl(clientId, apiKey, redirectUri) {
   const response = await fetch(
-    \`http://localhost:3000/api/generate/\${clientId}/\${clientSecret}/grab/?\` +
+    \`http://localhost:3000/api/generate/\${clientId}/\${apiKey}/grab?\` +
     new URLSearchParams({
       redirect_uri: redirectUri,
       scope: 'profile email',
@@ -787,9 +921,9 @@ import secrets
 from urllib.parse import urlencode
 
 class GLAStudioOAuth:
-    def __init__(self, client_id, client_secret, redirect_uri):
+    def __init__(self, client_id, api_key, redirect_uri):
         self.client_id = client_id
-        self.client_secret = client_secret
+        self.api_key = api_key
         self.redirect_uri = redirect_uri
         self.base_url = "http://localhost:3000"
 
@@ -798,7 +932,7 @@ class GLAStudioOAuth:
         state = secrets.token_urlsafe(32)
 
         response = requests.get(
-            f"{self.base_url}/api/generate/{self.client_id}/{self.client_secret}/grab/",
+            f"{self.base_url}/api/generate/{self.client_id}/{self.api_key}/grab",
             params={
                 'redirect_uri': self.redirect_uri,
                 'scope': scope,
@@ -833,7 +967,7 @@ class GLAStudioOAuth:
 # Usage example
 oauth_client = GLAStudioOAuth(
     client_id="your_client_id",
-    client_secret="your_client_secret",
+    api_key="your_api_key",
     redirect_uri="https://yourapp.com/callback"
 )
 
@@ -954,7 +1088,7 @@ curl -X POST http://localhost:3000/api/credentials \\
   }'
 
 # Step 2: Generate OAuth URL (replace with your actual credentials)
-curl "http://localhost:3000/api/generate/your_client_id/your_client_secret/grab/?redirect_uri=https://myapp.com/callback&scope=profile email&state=random123"
+curl "http://localhost:3000/api/generate/your_client_id/your_api_key/grab?redirect_uri=https://myapp.com/callback&scope=profile email&state=random123"
 
 # Step 3: After user authorization, exchange code for token
 curl -X POST http://localhost:3000/api/oauth/token \\
@@ -1101,7 +1235,7 @@ curl -X DELETE http://localhost:3000/api/user/revoke/app_id \\
               <ul className="space-y-2">
                 <li>
                   <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                    /api/generate/{"{id}"}/{"{key}"}/grab/
+                    /api/generate/{"{id}"}/{"{apiKey}"}/grab
                   </code>
                 </li>
                 <li>
